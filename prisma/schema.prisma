@@ -1,0 +1,120 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AdminUser {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  password String
+  role     String @default("admin") // admin | editor | viewer
+}
+
+model SystemSettings {
+  id                Int      @id @default(autoincrement())
+  defaultEmail      String?
+  defaultCronExpr   String   @default("0 8 * * *")
+  defaultReportType String   @default("activity")
+  defaultFormat     String   @default("excel")
+  updatedAt         DateTime @default(now())
+}
+
+model Product {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal        @db.Decimal(10,2)
+  stock       Int            @default(0)
+  category    String?
+  active      Boolean        @default(true)
+  codes       ProductCode[]
+  orders      Order[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ProductCode {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  code        String
+  used        Boolean  @default(false)
+  assignedTo  Int?
+  product     Product  @relation(fields: [productId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  productId  Int
+  status     String   @default("pending") // pending | paid | delivered | failed
+  total      Decimal  @db.Decimal(10,2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+}
+
+model ReportSchedule {
+  id            Int      @id @default(autoincrement())
+  reportType    String   @default("activity")
+  mode          String   @default("daily")
+  startDate     DateTime?
+  endDate       DateTime?
+  rangeType     String   @default("custom")
+  cronExpr      String
+  emails        String[] @db.Text
+  format        String   @default("excel")
+  enabled       Boolean  @default(true)
+  description   String?
+  createdAt     DateTime @default(now())
+}
+
+model ReportArchive {
+  id          Int      @id @default(autoincrement())
+  scheduleId  Int?
+  filePath    String
+  fileName    String
+  createdAt   DateTime @default(now())
+}
+
+model ReportDeliveryLog {
+  id          Int      @id @default(autoincrement())
+  scheduleId  Int?
+  sentAt      DateTime @default(now())
+  status      String   // success | failed
+  error       String?
+}
+
+model EmailLog {
+  id          Int      @id @default(autoincrement())
+  scheduleId  Int?
+  recipients  String[] @db.Text
+  subject     String?
+  status      String   // success | failed
+  error       String?
+  sentAt      DateTime @default(now())
+}
+
+model ReportAlert {
+  id          Int      @id @default(autoincrement())
+  scheduleId  Int
+  message     String
+  level       String   @default("warning") // warning | error
+  createdAt   DateTime @default(now())
+  resolved    Boolean  @default(false)
+}
+
+ 
